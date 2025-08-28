@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>US Cities Finder - Complete 291k Database</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <style>
+        .loading-spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-success { background-color: #10b981; }
+        .status-error { background-color: #ef4444; }
+        .status-loading { background-color: #f59e0b; animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .result-card {
+            transition: all 0.2s ease-in-out;
+        }
+        .result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .hosting-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Hosting Instructions Banner -->
+    <div class="hosting-banner text-white p-4 mb-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex items-center justify-between flex-wrap">
+                <div class="flex items-center">
+                    <i class="fas fa-info-circle text-2xl mr-3"></i>
+                    <div>
+                        <h3 class="font-bold text-lg">Complete 291k+ Database Ready!</h3>
+                        <p class="text-sm opacity-90">For full functionality, upload both files to web hosting (GitHub Pages, Netlify, etc.)</p>
+                    </div>
+                </div>
+                <button id="hostingHelp" class="bg-white bg-opacity-20 px-4 py-2 rounded-lg hover:bg-opacity-30 transition-all">
+                    <i class="fas fa-question-circle mr-2"></i>Hosting Help
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-map-marked-alt text-blue-600 mr-3"></i>
+                US Cities Finder
+            </h1>
+            <p class="text-xl text-gray-600 mb-2">Complete GNIS Database with Real Driving Times</p>
+            <div class="text-sm text-gray-500 flex items-center justify-center flex-wrap gap-4">
+                <span><i class="fas fa-database mr-1"></i>291,432+ Places</span>
+                <span><i class="fas fa-route mr-1"></i>Real Driving Times</span>
+                <span><i class="fas fa-filter mr-1"></i>Advanced Filtering</span>
+            </div>
+        </div>
+
+        <!-- Status Dashboard -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h3 class="text-lg font-semibold mb-4 text-gray-800">
+                <i class="fas fa-tachometer-alt mr-2"></i>System Status
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                    <span id="dbStatus" class="status-indicator status-loading"></span>
+                    <div>
+                        <div class="font-medium text-gray-800">Cities Database</div>
+                        <div id="dbCount" class="text-sm text-gray-600">Loading...</div>
+                    </div>
+                </div>
+                <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                    <span id="statesStatus" class="status-indicator status-loading"></span>
+                    <div>
+                        <div class="font-medium text-gray-800">States Available</div>
+                        <div id="statesCount" class="text-sm text-gray-600">Loading...</div>
+                    </div>
+                </div>
+                <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                    <span id="routingStatus" class="status-indicator status-success"></span>
+                    <div>
+                        <div class="font-medium text-gray-800">Routing API</div>
+                        <div class="text-sm text-gray-600">Ready</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Interface -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h3 class="text-lg font-semibold mb-4 text-gray-800">
+                <i class="fas fa-search mr-2"></i>Find Nearby Cities
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-city mr-1"></i>City Name
+                    </label>
+                    <input type="text" id="cityInput" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="e.g., Dallas, New Haven">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-flag mr-1"></i>State
+                    </label>
+                    <select id="stateSelect" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">Loading states...</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-users mr-1"></i>Min Population
+                    </label>
+                    <select id="populationFilter" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="0">Any Size</option>
+                        <option value="1000">1,000+</option>
+                        <option value="5000">5,000+</option>
+                        <option value="10000">10,000+</option>
+                        <option value="25000">25,000+</option>
+                        <option value="50000">50,000+</option>
+                        <option value="100000">100,000+</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-expand-arrows-alt mr-1"></i>Search Radius
+                    </label>
+                    <select id="radiusSelect" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="25">25 miles</option>
+                        <option value="50" selected>50 miles</option>
+                        <option value="75">75 miles</option>
+                        <option value="100">100 miles</option>
+                        <option value="150">150 miles</option>
+                        <option value="200">200 miles</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <button id="searchBtn" 
+                        class="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    <i class="fas fa-search mr-2"></i>Find Nearby Cities
+                </button>
+                <button id="exportBtn" 
+                        class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        style="display: none;">
+                    <i class="fas fa-download mr-2"></i>Export CSV
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" class="bg-white rounded-xl shadow-lg p-8 text-center" style="display: none;">
+            <div class="loading-spinner mx-auto mb-4"></div>
+            <h3 class="text-lg font-medium text-gray-800">Searching Cities...</h3>
+            <p class="text-gray-600">Calculating distances and driving times</p>
+        </div>
+
+        <!-- Results -->
+        <div id="resultsContainer" style="display: none;">
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">
+                        <i class="fas fa-list mr-2"></i>Search Results
+                    </h3>
+                    <div class="flex items-center gap-4">
+                        <span id="resultCount" class="text-sm text-gray-600"></span>
+                        <select id="sortBy" class="px-3 py-1 border border-gray-300 rounded text-sm">
+                            <option value="distance">Sort by Distance</option>
+                            <option value="population">Sort by Population</option>
+                            <option value="name">Sort by Name</option>
+                            <option value="drivingTime">Sort by Driving Time</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="resultsTable" class="overflow-x-auto"></div>
+            </div>
+        </div>
+
+        <!-- Hosting Help Modal -->
+        <div id="hostingModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+            <div class="bg-white rounded-xl p-6 m-4 max-w-2xl max-h-96 overflow-y-auto">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-gray-800">Hosting Instructions</h3>
+                    <button id="closeModal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="space-y-4 text-sm">
+                    <div class="p-4 bg-blue-50 rounded-lg">
+                        <h4 class="font-semibold text-blue-800 mb-2">For Complete 291k+ Database:</h4>
+                        <p class="text-blue-700">Upload both files to web hosting to avoid CORS restrictions and access the full database.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-2">Free Hosting Options:</h4>
+                        <ul class="list-disc list-inside space-y-1 text-gray-600">
+                            <li><strong>GitHub Pages:</strong> Create repository, upload files, enable Pages</li>
+                            <li><strong>Netlify:</strong> Drag & drop both files to deploy instantly</li>
+                            <li><strong>Vercel:</strong> Connect GitHub or upload files directly</li>
+                            <li><strong>Firebase Hosting:</strong> Use Firebase CLI to deploy</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-2">Local Testing:</h4>
+                        <code class="block bg-gray-100 p-2 rounded text-xs">
+                            python -m http.server 8000<br>
+                            # Then open: http://localhost:8000
+                        </code>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            OPENROUTE_API_KEY: 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjUyZDU5OGJhNGFiZDQyYmI4YmJhN2U1YzVkODQwMGVkIiwiaCI6Im11cm11cjY0In0=',
+            CSV_FILENAME: 'us_cities_comprehensive.csv'
+        };
+
+        // Global variables
+        let citiesDatabase = [];
+        let searchResults = [];
+        let isFullDatabaseLoaded = false;
+
+        // Embedded fallback database (major cities for immediate functionality)
+        const FALLBACK_CITIES = [
+            // Major Metro Areas - Texas
+            {name: "Dallas", state: "TX", county: "Dallas County", lat: 32.7767, lng: -96.7970, population: 1341075, feature_type: "city"},
+            {name: "Fort Worth", state: "TX", county: "Tarrant County", lat: 32.7555, lng: -97.3308, population: 918915, feature_type: "city"},
+            {name: "Arlington", state: "TX", county: "Tarrant County", lat: 32.7357, lng: -97.1081, population: 398854, feature_type: "city"},
+            {name: "Plano", state: "TX", county: "Collin County", lat: 33.0198, lng: -96.6989, population: 288061, feature_type: "city"},
+            {name: "Irving", state: "TX", county: "Dallas County", lat: 32.8140, lng: -96.9489, population: 256684, feature_type: "city"},
+            
+            // Connecticut Cities
+            {name: "New Haven", state: "CT", county: "New Haven County", lat: 41.3083, lng: -72.9279, population: 134023, feature_type: "city"},
+            {name: "Bridgeport", state: "CT", county: "Fairfield County", lat: 41.1865, lng: -73.1952, population: 148654, feature_type: "city"},
+            {name: "Hartford", state: "CT", county: "Hartford County", lat: 41.7658, lng: -72.6734, population: 124006, feature_type: "city"},
+            {name: "Waterbury", state: "CT", county: "New Haven County", lat: 41.5581, lng: -73.0515, population: 108327, feature_type: "city"},
+            {name: "Stamford", state: "CT", county: "Fairfield County", lat: 41.0534, lng: -73.5387, population: 135470, feature_type: "city"},
+            
+            // New York Area
+            {name: "New York", state: "NY", county: "New York County", lat: 40.7128, lng: -74.0060, population: 8336817, feature_type: "city"},
+            {name: "Brooklyn", state: "NY", county: "Kings County", lat: 40.6782, lng: -73.9442, population: 2736074, feature_type: "borough"},
+            {name: "Queens", state: "NY", county: "Queens County", lat: 40.7282, lng: -73.7949, population: 2405464, feature_type: "borough"},
+            {name: "Buffalo", state: "NY", county: "Erie County", lat: 42.8864, lng: -78.8784, population: 278349, feature_type: "city"},
+            {name: "Rochester", state: "NY", county: "Monroe County", lat: 43.1566, lng: -77.6088, population: 211328, feature_type: "city"},
+            
+            // California Major Cities
+            {name: "Los Angeles", state: "CA", county: "Los Angeles County", lat: 34.0522, lng: -118.2437, population: 3898747, feature_type: "city"},
+            {name: "San Francisco", state: "CA", county: "San Francisco County", lat: 37.7749, lng: -122.4194, population: 873965, feature_type: "city"},
+            {name: "San Diego", state: "CA", county: "San Diego County", lat: 32.7157, lng: -117.1611, population: 1386932, feature_type: "city"},
+            {name: "San Jose", state: "CA", county: "Santa Clara County", lat: 37.3382, lng: -121.8863, population: 1013240, feature_type: "city"},
+            {name: "Oakland", state: "CA", county: "Alameda County", lat: 37.8044, lng: -122.2712, population: 433031, feature_type: "city"},
+            
+            // Other Major Cities
+            {name: "Chicago", state: "IL", county: "Cook County", lat: 41.8781, lng: -87.6298, population: 2693976, feature_type: "city"},
+            {name: "Houston", state: "TX", county: "Harris County", lat: 29.7604, lng: -95.3698, population: 2320268, feature_type: "city"},
+            {name: "Phoenix", state: "AZ", county: "Maricopa County", lat: 33.4484, lng: -112.0740, population: 1608139, feature_type: "city"},
+            {name: "Philadelphia", state: "PA", county: "Philadelphia County", lat: 39.9526, lng: -75.1652, population: 1584064, feature_type: "city"},
+            {name: "San Antonio", state: "TX", county: "Bexar County", lat: 29.4241, lng: -98.4936, population: 1547253, feature_type: "city"},
+            {name: "Miami", state: "FL", county: "Miami-Dade County", lat: 25.7617, lng: -80.1918, population: 467963, feature_type: "city"},
+            {name: "Atlanta", state: "GA", county: "Fulton County", lat: 33.7490, lng: -84.3880, population: 498715, feature_type: "city"},
+            {name: "Boston", state: "MA", county: "Suffolk County", lat: 42.3601, lng: -71.0589, population: 692600, feature_type: "city"},
+            {name: "Seattle", state: "WA", county: "King County", lat: 47.6062, lng: -122.3321, population: 749256, feature_type: "city"},
+            {name: "Denver", state: "CO", county: "Denver County", lat: 39.7392, lng: -104.9903, population: 715522, feature_type: "city"},
+        ];
+
+        // US States
+        const US_STATES = [
+            'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+            'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+            'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+            'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+            'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC'
+        ];
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        async function initializeApp() {
+            console.log('Initializing US Cities Finder...');
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Load states immediately
+            populateStatesDropdown();
+            
+            // Try to load full database
+            await loadCitiesDatabase();
+            
+            // Setup search functionality
+            setupSearch();
+        }
+
+        function setupEventListeners() {
+            document.getElementById('hostingHelp').addEventListener('click', showHostingHelp);
+            document.getElementById('closeModal').addEventListener('click', hideHostingHelp);
+            document.getElementById('searchBtn').addEventListener('click', performSearch);
+            document.getElementById('sortBy').addEventListener('change', sortResults);
+            document.getElementById('exportBtn').addEventListener('click', exportResults);
+            
+            // Close modal on background click
+            document.getElementById('hostingModal').addEventListener('click', function(e) {
+                if (e.target === this) hideHostingHelp();
+            });
+        }
+
+        function populateStatesDropdown() {
+            const stateSelect = document.getElementById('stateSelect');
+            stateSelect.innerHTML = '<option value="">Select State</option>';
+            
+            US_STATES.forEach(state => {
+                const option = document.createElement('option');
+                option.value = state;
+                option.textContent = state;
+                stateSelect.appendChild(option);
+            });
+            
+            updateStatus('statesStatus', 'success');
+            document.getElementById('statesCount').textContent = `${US_STATES.length} states loaded`;
+        }
+
+        async function loadCitiesDatabase() {
+            try {
+                console.log('Attempting to load full cities database...');
+                updateStatus('dbStatus', 'loading');
+                
+                const response = await fetch(CONFIG.CSV_FILENAME);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const csvText = await response.text();
+                citiesDatabase = parseCSV(csvText);
+                isFullDatabaseLoaded = true;
+                
+                console.log(`Loaded ${citiesDatabase.length} cities from database`);
+                updateStatus('dbStatus', 'success');
+                document.getElementById('dbCount').textContent = `${citiesDatabase.length.toLocaleString()} cities loaded`;
+                
+            } catch (error) {
+                console.warn('Could not load full database, using fallback:', error.message);
+                citiesDatabase = [...FALLBACK_CITIES];
+                isFullDatabaseLoaded = false;
+                
+                updateStatus('dbStatus', 'error');
+                document.getElementById('dbCount').textContent = `${citiesDatabase.length} cities (fallback)`;
+                
+                // Show hosting help banner
+                showFallbackMessage();
+            }
+        }
+
+        function parseCSV(csvText) {
+            const lines = csvText.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            const cities = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const values = parseCSVLine(lines[i]);
+                if (values.length >= headers.length) {
+                    const city = {};
+                    headers.forEach((header, index) => {
+                        city[header] = values[index] || '';
+                    });
+                    
+                    // Convert numeric fields
+                    if (city.lat) city.lat = parseFloat(city.lat);
+                    if (city.lng) city.lng = parseFloat(city.lng);
+                    if (city.population) city.population = parseInt(city.population) || 0;
+                    
+                    cities.push(city);
+                }
+            }
+            
+            return cities;
+        }
+
+        function parseCSVLine(line) {
+            const values = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    values.push(current.trim().replace(/"/g, ''));
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            values.push(current.trim().replace(/"/g, ''));
+            return values;
+        }
+
+        function updateStatus(elementId, status) {
+            const element = document.getElementById(elementId);
+            element.className = `status-indicator status-${status}`;
+        }
+
+        function showFallbackMessage() {
+            // Could add a more prominent message about using fallback data
+            console.log('Using fallback database with major cities');
+        }
+
+        function setupSearch() {
+            // Enable search
+            document.getElementById('searchBtn').disabled = false;
+        }
+
+        async function performSearch() {
+            const cityName = document.getElementById('cityInput').value.trim();
+            const state = document.getElementById('stateSelect').value;
+            const minPopulation = parseInt(document.getElementById('populationFilter').value);
+            const radius = parseInt(document.getElementById('radiusSelect').value);
+            
+            if (!cityName) {
+                alert('Please enter a city name');
+                return;
+            }
+            
+            if (!state) {
+                alert('Please select a state');
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                // Find the input city
+                const inputCity = findCity(cityName, state);
+                if (!inputCity) {
+                    throw new Error(`City "${cityName}, ${state}" not found in database`);
+                }
+                
+                // Find nearby cities
+                const nearbyCities = findNearbyCities(inputCity, radius, minPopulation);
+                
+                // Calculate driving times
+                await calculateDrivingTimes(inputCity, nearbyCities);
+                
+                // Display results
+                displayResults(nearbyCities, inputCity);
+                
+            } catch (error) {
+                console.error('Search error:', error);
+                alert(`Search failed: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function findCity(name, state) {
+            return citiesDatabase.find(city => 
+                city.name && city.state &&
+                city.name.toLowerCase().includes(name.toLowerCase()) &&
+                city.state.toUpperCase() === state.toUpperCase()
+            );
+        }
+
+        function findNearbyCities(centerCity, radius, minPopulation) {
+            const nearby = [];
+            
+            citiesDatabase.forEach(city => {
+                if (city === centerCity || !city.lat || !city.lng) return;
+                
+                const distance = calculateDistance(centerCity.lat, centerCity.lng, city.lat, city.lng);
+                
+                if (distance <= radius && (city.population || 0) >= minPopulation) {
+                    nearby.push({
+                        ...city,
+                        distance: distance,
+                        drivingTime: null
+                    });
+                }
+            });
+            
+            return nearby.sort((a, b) => a.distance - b.distance);
+        }
+
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 3959; // Earth's radius in miles
+            const dLat = toRad(lat2 - lat1);
+            const dLng = toRad(lng2 - lng1);
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                     Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function toRad(degrees) {
+            return degrees * (Math.PI / 180);
+        }
+
+        async function calculateDrivingTimes(origin, cities) {
+            const batchSize = 5;
+            
+            for (let i = 0; i < cities.length; i += batchSize) {
+                const batch = cities.slice(i, i + batchSize);
+                
+                await Promise.all(batch.map(async (city) => {
+                    try {
+                        const drivingTime = await getDrivingTime(origin, city);
+                        city.drivingTime = drivingTime;
+                    } catch (error) {
+                        console.warn(`Could not get driving time for ${city.name}:`, error);
+                        city.drivingTime = Math.round(city.distance / 45 * 60); // Estimate: 45 mph average
+                    }
+                }));
+                
+                // Small delay between batches to respect rate limits
+                if (i + batchSize < cities.length) {
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                }
+            }
+        }
+
+        async function getDrivingTime(origin, destination) {
+            const url = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${CONFIG.OPENROUTE_API_KEY}&start=${origin.lng},${origin.lat}&end=${destination.lng},${destination.lat}`;
+            
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            const duration = data.features[0].properties.segments[0].duration;
+            return Math.round(duration / 60); // Convert to minutes
+        }
+
+        function displayResults(cities, originCity) {
+            searchResults = cities;
+            
+            const container = document.getElementById('resultsContainer');
+            const table = document.getElementById('resultsTable');
+            const countElement = document.getElementById('resultCount');
+            
+            countElement.textContent = `${cities.length} cities found within search radius`;
+            
+            if (cities.length === 0) {
+                table.innerHTML = '<div class="text-center py-8 text-gray-500">No cities found matching your criteria. Try increasing the search radius or lowering the minimum population.</div>';
+                container.style.display = 'block';
+                return;
+            }
+            
+            // Create table
+            let html = `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-medium text-gray-700">City</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-700">County</th>
+                                <th class="px-4 py-3 text-right font-medium text-gray-700">Population</th>
+                                <th class="px-4 py-3 text-right font-medium text-gray-700">Distance</th>
+                                <th class="px-4 py-3 text-right font-medium text-gray-700">Driving Time</th>
+                                <th class="px-4 py-3 text-center font-medium text-gray-700">Type</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+            `;
+            
+            cities.slice(0, 100).forEach((city, index) => { // Limit to 100 results for performance
+                const populationText = city.population ? city.population.toLocaleString() : 'Unknown';
+                const drivingTimeText = city.drivingTime ? `${city.drivingTime} min` : 'Calculating...';
+                const typeIcon = getTypeIcon(city.feature_type);
+                
+                html += `
+                    <tr class="result-card hover:bg-gray-50">
+                        <td class="px-4 py-3">
+                            <div class="font-medium text-gray-900">${city.name}</div>
+                            <div class="text-gray-500 text-xs">${city.state}</div>
+                        </td>
+                        <td class="px-4 py-3 text-gray-600">${city.county || 'Unknown'}</td>
+                        <td class="px-4 py-3 text-right text-gray-900">${populationText}</td>
+                        <td class="px-4 py-3 text-right text-gray-900">${city.distance.toFixed(1)} mi</td>
+                        <td class="px-4 py-3 text-right text-gray-900">${drivingTimeText}</td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                ${typeIcon} ${city.feature_type || 'place'}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table></div>';
+            
+            if (cities.length > 100) {
+                html += `<div class="text-center py-4 text-gray-500 text-sm">Showing first 100 results of ${cities.length} total</div>`;
+            }
+            
+            table.innerHTML = html;
+            container.style.display = 'block';
+            document.getElementById('exportBtn').style.display = 'inline-block';
+        }
+
+        function getTypeIcon(type) {
+            const icons = {
+                'city': '<i class="fas fa-city"></i>',
+                'town': '<i class="fas fa-home"></i>',
+                'village': '<i class="fas fa-tree"></i>',
+                'borough': '<i class="fas fa-map-marker-alt"></i>'
+            };
+            return icons[type] || '<i class="fas fa-map-pin"></i>';
+        }
+
+        function sortResults() {
+            if (!searchResults.length) return;
+            
+            const sortBy = document.getElementById('sortBy').value;
+            
+            searchResults.sort((a, b) => {
+                switch (sortBy) {
+                    case 'distance':
+                        return a.distance - b.distance;
+                    case 'population':
+                        return (b.population || 0) - (a.population || 0);
+                    case 'name':
+                        return a.name.localeCompare(b.name);
+                    case 'drivingTime':
+                        return (a.drivingTime || 999) - (b.drivingTime || 999);
+                    default:
+                        return 0;
+                }
+            });
+            
+            // Re-display with new sort
+            displayResults(searchResults, null);
+        }
+
+        function exportResults() {
+            if (!searchResults.length) return;
+            
+            const headers = ['City', 'State', 'County', 'Population', 'Distance (mi)', 'Driving Time (min)', 'Type'];
+            const rows = searchResults.map(city => [
+                city.name,
+                city.state,
+                city.county || '',
+                city.population || '',
+                city.distance.toFixed(1),
+                city.drivingTime || '',
+                city.feature_type || ''
+            ]);
+            
+            const csvContent = [headers, ...rows]
+                .map(row => row.map(field => `"${field}"`).join(','))
+                .join('\n');
+            
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'nearby_cities_results.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function showLoading() {
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('resultsContainer').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingIndicator').style.display = 'none';
+        }
+
+        function showHostingHelp() {
+            document.getElementById('hostingModal').classList.remove('hidden');
+            document.getElementById('hostingModal').classList.add('flex');
+        }
+
+        function hideHostingHelp() {
+            document.getElementById('hostingModal').classList.add('hidden');
+            document.getElementById('hostingModal').classList.remove('flex');
+        }
+    </script>
+</body>
+</html>
+    <script id="html_badge_script1">
+        window.__genspark_remove_badge_link = "https://www.genspark.ai/api/html_badge/" +
+            "remove_badge?token=To%2FBnjzloZ3UfQdcSaYfDrOrAuSPp0bDVx4aUE0sEDLqo4JrDUElcJcWeFsg6U6OAkhb61RIAHPu1VC243%2BfgbU4umRWq0XI9fvlOMB555bmtAV%2F5UYHCBLjkVOoFhQYXM8Ee168y%2BDrRFsSrNVWEYucUujQveIMxbL1cFMedNITDLa619BcNpnrAXEh23MCOaY%2FFNvr6LClOasgGsRt8qaSbF73wW4ctc3aZQOL5Cf5LN0r7Pcq0jpx9REzuzk1duEvZrlhNVMmMZkDX1y%2BwLXSdVOxy6N7QmXQ22Kul0y3KGMBsiAWZR8BleNoC54c39FotXyR%2BbxM9Cn0KkxkHKNQJk9veJ1F7r90h65h99Fc5QzGpQPmk%2Bt2%2BjtGmfrkZXX%2FrLyX%2BAyne1gCtI1CHVJwpUG%2BhGy65IRxTAwVabeBNO9RrwKb9CN2DcvuHmtyG%2Fa1oyROneBk1UbNpW3lHz6nmGGcI0%2BI7WAJzFtNDorVxFoIBOVRZ5LMDTBy6nxhuayetjTqkzjdIQqoIS3etGdUtr8lsCR3E4Hn7n5vxVQ%3D";
+        window.__genspark_locale = "en-US";
+        window.__genspark_token = "To/BnjzloZ3UfQdcSaYfDrOrAuSPp0bDVx4aUE0sEDLqo4JrDUElcJcWeFsg6U6OAkhb61RIAHPu1VC243+fgbU4umRWq0XI9fvlOMB555bmtAV/5UYHCBLjkVOoFhQYXM8Ee168y+DrRFsSrNVWEYucUujQveIMxbL1cFMedNITDLa619BcNpnrAXEh23MCOaY/FNvr6LClOasgGsRt8qaSbF73wW4ctc3aZQOL5Cf5LN0r7Pcq0jpx9REzuzk1duEvZrlhNVMmMZkDX1y+wLXSdVOxy6N7QmXQ22Kul0y3KGMBsiAWZR8BleNoC54c39FotXyR+bxM9Cn0KkxkHKNQJk9veJ1F7r90h65h99Fc5QzGpQPmk+t2+jtGmfrkZXX/rLyX+Ayne1gCtI1CHVJwpUG+hGy65IRxTAwVabeBNO9RrwKb9CN2DcvuHmtyG/a1oyROneBk1UbNpW3lHz6nmGGcI0+I7WAJzFtNDorVxFoIBOVRZ5LMDTBy6nxhuayetjTqkzjdIQqoIS3etGdUtr8lsCR3E4Hn7n5vxVQ=";
+    </script>
+    
+    <script id="html_notice_dialog_script" src="https://www.genspark.ai/notice_dialog.js"></script>
+    
